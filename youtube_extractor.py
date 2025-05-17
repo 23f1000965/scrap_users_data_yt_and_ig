@@ -76,10 +76,10 @@ class YouTubeExtractor:
                     print(f"Found channel ID for {channel_id_or_name}: {channel_id}")
                 else:
                     print(f"Could not find channel ID for: {channel_id_or_name}")
-                    return
+                    return None  # Return None explicitly
             except Exception as e:
                 print(f"Error searching for channel {channel_id_or_name}: {e}")
-                return
+                return None  # Return None explicitly
         else:
             channel_id = channel_id_or_name
         
@@ -90,8 +90,11 @@ class YouTubeExtractor:
                 # Add to the class's data collection
                 self.channels_data = self.channels_data if hasattr(self, 'channels_data') else []
                 self.channels_data.append(channel_data)
+                return channel_data  # Return the channel data 
+            return None  # Return None if no data
         except Exception as e:
             print(f"Error extracting data for {channel_id}: {e}")
+            return None  # Return None explicitly
     
     def _get_profile_data_by_id(self, channel_id):
         """Extract data for a single YouTube channel by ID"""
