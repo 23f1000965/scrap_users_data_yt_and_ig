@@ -5,8 +5,14 @@ from youtube_extractor import YouTubeExtractor
 from data_processor import DataProcessor
 import time
 import random
+from dotenv import load_dotenv
 
 def main():
+    # Load environment variables
+    load_dotenv()
+    INSTAGRAM_API_KEY = os.getenv("INSTAGRAM_API_KEY")
+    YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
+    
     parser = argparse.ArgumentParser(description='Social Media Metadata Extraction Pipeline')
     parser.add_argument('--ig_usernames', type=str, help='Output format (only JSON supported)')
     parser.add_argument('--yt_channels', type=str, help='Output format (only JSON supported)')
@@ -34,7 +40,7 @@ def main():
     
     # Step 1: Extract Instagram data
     print("\n--- Instagram Extraction ---")
-    ig_extractor = InstagramExtractor()
+    ig_extractor = InstagramExtractor(api_key=INSTAGRAM_API_KEY)  # Pass the API key
     
     # Limit to only 5 profiles
     instagram_usernames = instagram_usernames[:3]
@@ -52,7 +58,7 @@ def main():
     
     # Step 2: Extract YouTube data
     print("\n--- YouTube Extraction ---")
-    yt_extractor = YouTubeExtractor()
+    yt_extractor = YouTubeExtractor(api_key=YOUTUBE_API_KEY)  # Pass the API key
     for channel in youtube_channels:
         print(f"Processing YouTube channel: {channel}")
         yt_extractor.extract_channel(channel)

@@ -292,8 +292,14 @@ class InstagramExtractor:
             print(f"Error saving Instagram data: {e}")
 
 if __name__ == "__main__":
-    # Example usage
-    extractor = InstagramExtractor(api_key="4dfd161a2dmshda8fc2b6e527a9fp1789bbjsnc11a49b13c3d")
+    # Example usage - load from environment variables
+    from dotenv import load_dotenv
+    import os
+    
+    load_dotenv()
+    api_key = os.getenv("INSTAGRAM_API_KEY")
+    
+    extractor = InstagramExtractor(api_key=api_key)
     extractor.extract_profile_data("natgeo")
     extractor.save_data("instagram_data.json")
 
