@@ -5,10 +5,10 @@ import random
 import requests
 
 class InstagramExtractor:
-    def __init__(self):
+    def __init__(self, api_key=None):
+        self.api_key = api_key
         self.profiles_data = []
         # RapidAPI credentials
-        self.api_key = "4dfd161a2dmshda8fc2b6e527a9fp1789bbjsnc11a49b13c3d"
         self.api_host = "instagram-scraper-stable-api.p.rapidapi.com"
         
         # Category keywords for content detection
@@ -293,7 +293,7 @@ class InstagramExtractor:
 
 if __name__ == "__main__":
     # Example usage
-    extractor = InstagramExtractor()
+    extractor = InstagramExtractor(api_key="4dfd161a2dmshda8fc2b6e527a9fp1789bbjsnc11a49b13c3d")
     extractor.extract_profile_data("natgeo")
     extractor.save_data("instagram_data.json")
 

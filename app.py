@@ -10,6 +10,18 @@ import seaborn as sns
 from PIL import Image
 from io import BytesIO
 import time
+from dotenv import load_dotenv
+
+# Load environment variables from .env file or Streamlit secrets
+try:
+    # Try to load from Streamlit secrets (for deployed app)
+    INSTAGRAM_API_KEY = st.secrets["INSTAGRAM_API_KEY"]
+    YOUTUBE_API_KEY = st.secrets["YOUTUBE_API_KEY"]
+except:
+    # Fall back to .env file (for local development)
+    load_dotenv()
+    INSTAGRAM_API_KEY = os.getenv("INSTAGRAM_API_KEY")
+    YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 
 # Import your existing extractors and processor
 from instagram_extractor import InstagramExtractor
@@ -107,7 +119,7 @@ def run_analysis():
                 progress_text = st.empty()
                 
                 # Initialize Instagram extractor
-                ig_extractor = InstagramExtractor()
+                ig_extractor = InstagramExtractor(api_key=INSTAGRAM_API_KEY)
                 
                 for i, username in enumerate(instagram_accounts):
                     try:
@@ -139,7 +151,7 @@ def run_analysis():
                 progress_text = st.empty()
                 
                 # Initialize YouTube extractor
-                yt_extractor = YouTubeExtractor()
+                yt_extractor = YouTubeExtractor(api_key=YOUTUBE_API_KEY)
                 
                 for i, channel in enumerate(youtube_channels):
                     try:
