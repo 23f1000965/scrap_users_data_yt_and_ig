@@ -10,30 +10,50 @@ import seaborn as sns
 from PIL import Image
 from io import BytesIO
 import time
+import random
+from functools import lru_cache
 from dotenv import load_dotenv
 
-# Load environment variables from .env file or Streamlit secrets
-try:
-    # Try to load from Streamlit secrets (for deployed app)
-    INSTAGRAM_API_KEY = st.secrets["INSTAGRAM_API_KEY"]
-    YOUTUBE_API_KEY = st.secrets["YOUTUBE_API_KEY"]
-except:
-    # Fall back to .env file (for local development)
-    load_dotenv()
-    INSTAGRAM_API_KEY = os.getenv("INSTAGRAM_API_KEY")
-    YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
-
-# Import your existing extractors and processor
-from instagram_extractor import InstagramExtractor
-from youtube_extractor import YouTubeExtractor
-from data_processor import DataProcessor
-
-# Page configuration
+# Page configuration MUST be the first Streamlit command
 st.set_page_config(
     page_title="Social Media Analytics Dashboard",
     page_icon="📊",
     layout="wide"
 )
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Access API keys - move the visual feedback to after page config
+INSTAGRAM_API_KEY = None
+YOUTUBE_API_KEY = None
+
+try:
+    # Try to load from Streamlit secrets (for deployed app)
+    INSTAGRAM_API_KEY = st.secrets["INSTAGRAM_API_KEY"]
+    api_status_ig = "✅ Loaded Instagram API key from Streamlit secrets"
+except:
+    # Fall back to .env file (for local development)
+    INSTAGRAM_API_KEY = os.getenv("INSTAGRAM_API_KEY")
+    if INSTAGRAM_API_KEY:
+        api_status_ig = "✅ Loaded Instagram API key from .env file"
+    else:
+        api_status_ig = "❌ Instagram API key not found"
+
+try:
+    YOUTUBE_API_KEY = st.secrets["YOUTUBE_API_KEY"]
+    api_status_yt = "✅ Loaded YouTube API key from Streamlit secrets"
+except:
+    YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
+    if YOUTUBE_API_KEY:
+        api_status_yt = "✅ Loaded YouTube API key from .env file"
+    else:
+        api_status_yt = "❌ YouTube API key not found"
+
+# Import your existing extractors and processor
+from instagram_extractor import InstagramExtractor
+from youtube_extractor import YouTubeExtractor
+from data_processor import DataProcessor
 
 # Title and description
 st.title("📊 Social Media Analytics Dashboard")
@@ -53,6 +73,9 @@ platform = st.sidebar.radio(
 
 # Use default accounts option
 use_default = st.sidebar.checkbox("Use default accounts", value=False)
+
+# Add demo mode option
+use_demo_data = st.sidebar.checkbox("Use demo data (avoid API limits)", value=True)
 
 # Default accounts
 default_instagram = ["natgeo", "nasa", "instagram"]
@@ -103,6 +126,23 @@ def get_download_link(file_path, link_text):
     href = f'<a href="data:file/txt;base64,{b64}" download="{os.path.basename(file_path)}">{link_text}</a>'
     return href
 
+# Add caching to reduce API calls
+@st.cache_data(ttl=3600)  # Cache data for 1 hour
+def fetch_youtube_data(extractor, channel_id):
+    try:
+        return extractor.extract_channel(channel_id)
+    except Exception as e:
+        st.error(f"YouTube API error: {str(e)}")
+        return None
+
+@st.cache_data(ttl=3600)  # Cache data for 1 hour
+def fetch_instagram_data(extractor, username):
+    try:
+        return extractor.extract_profile_data(username)
+    except Exception as e:
+        st.error(f"Instagram API error: {str(e)}")
+        return None
+
 # Function to run analysis
 def run_analysis():
     try:
@@ -126,23 +166,27 @@ def run_analysis():
                         progress_text.write(f"Processing Instagram profile: {username}")
                         result = ig_extractor.extract_profile_data(username)
                         
-                        # Check for rate limit indicators in the response
-                        if result is None or (isinstance(result, dict) and result.get('error_code') == 429):
-                            st.error(f"⚠️ API Rate Limit Reached for Instagram! Please try again later or use a different API key.")
-                            return None, None, None
-                            
-                        progress.progress((i + 1) / len(instagram_accounts) * 0.4)  # First 40% for Instagram
+                        # Check for rate limit or errors
+                        if result is None:
+                            st.warning(f"Could not extract data for {username}")
+                        else:
+                            st.success(f"Successfully extracted data for {username}")
+                        
+                        progress.progress((i + 1) / len(instagram_accounts) * 0.4)
                     except Exception as e:
-                        if "429" in str(e) or "rate limit" in str(e).lower() or "too many requests" in str(e).lower():
-                            st.error(f"⚠️ API Rate Limit Reached for Instagram! Please try again later or use a different API key.")
+                        if "429" in str(e) or "rate limit" in str(e).lower():
+                            st.error(f"⚠️ API Rate Limit Reached for Instagram! Please try again later.")
                             return None, None, None
                         else:
                             st.warning(f"Error processing {username}: {str(e)}")
                 
                 # Save Instagram data
-                instagram_data_path = os.path.join(output_dir, "instagram_data.json")
-                ig_extractor.save_data(instagram_data_path)
-                progress_text.write("✅ Instagram data extraction complete")
+                if ig_extractor.profiles_data:
+                    instagram_data_path = os.path.join(output_dir, "instagram_data.json")
+                    ig_extractor.save_data(instagram_data_path)
+                    st.success(f"✅ Successfully processed {len(ig_extractor.profiles_data)} Instagram profiles")
+                else:
+                    st.warning("No Instagram data was extracted")
             
             # Step 2: Extract YouTube data
             youtube_data_path = None
@@ -158,18 +202,29 @@ def run_analysis():
                         progress_text.write(f"Processing YouTube channel: {channel}")
                         result = yt_extractor.extract_channel(channel)
                         
-                        # Check for rate limit indicators in the response
-                        if result is None or (isinstance(result, dict) and result.get('error_code') == 429):
+                        if result is None:
+                            st.warning(f"Could not extract data for {channel}")
+                        else:
+                            st.success(f"Successfully extracted data for {channel}")
+                        
+                        # More careful rate limit detection
+                        if result is None:
+                            st.warning(f"No result returned for {channel}")
+                        elif isinstance(result, dict) and result.get('error_code') == 429:
                             st.error(f"⚠️ API Rate Limit Reached for YouTube! Please try again later or use a different API key.")
                             return None, None, None
-                            
-                        progress.progress(0.4 + (i + 1) / len(youtube_channels) * 0.4)  # Next 40% for YouTube
+                        
+                        progress.progress(0.4 + (i + 1) / len(youtube_channels) * 0.4)
                     except Exception as e:
-                        if "quotaExceeded" in str(e) or "429" in str(e) or "rate limit" in str(e).lower():
+                        error_message = str(e).lower()
+                        
+                        # Only trigger for actual rate limit errors
+                        if "quotaexceeded" in error_message or ("429" in error_message and "rate limit" in error_message):
                             st.error(f"⚠️ API Rate Limit Reached for YouTube! Please try again later or use a different API key.")
                             return None, None, None
                         else:
                             st.warning(f"Error processing {channel}: {str(e)}")
+                            # Continue processing instead of stopping
                 
                 # Save YouTube data
                 youtube_data_path = os.path.join(output_dir, "youtube_data.json")
@@ -199,6 +254,22 @@ def run_analysis():
                 
                 progress.progress(1.0)  # 100% complete
                 
+                if processor.instagram_data:
+                    st.success(f"✅ Instagram data loaded: {len(processor.instagram_data)} profiles")
+                if processor.youtube_data:
+                    st.success(f"✅ YouTube data loaded: {len(processor.youtube_data)} profiles")
+                
+                if processor.combined_data is None or len(processor.combined_data) == 0:
+                    st.error("No data was processed. Check if the DataProcessor.enrich_data() method is working correctly.")
+                    # Try to create a minimal valid DataFrame to prevent errors
+                    processor.combined_data = pd.DataFrame({
+                        'name': ['Test'],
+                        'platform': ['Test'],
+                        'followers': [0],
+                        'engagement_rate': [0],
+                        'category': ['Unknown']
+                    })
+                
                 return json_path, report_path, processor.combined_data
             else:
                 st.error("No data was extracted. Please check the usernames/channels and try again.")
@@ -222,11 +293,11 @@ if analyze_button:
             # Display success message
             st.success("Analysis complete! 🎉")
             
-            # Create tabs for different views
+            # Dashboard tabs
             tab1, tab2, tab3 = st.tabs(["📊 Dashboard", "🔍 Raw Data", "📝 Report"])
             
             with tab1:
-                st.header("Analytics Dashboard")
+                st.header("Creator Analytics Dashboard")
                 
                 # Key metrics in cards
                 col1, col2, col3, col4 = st.columns(4)
