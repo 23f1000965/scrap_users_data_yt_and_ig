@@ -42,7 +42,7 @@ class InstagramExtractor:
             if response.status_code != 200:
                 print(f"ERROR: API call failed with status code {response.status_code}")
                 print("No fallback to mock data. Real data only.")
-                return
+                return None  # Return None instead of just returning
             
             # Parse profile data from actual API response
             profile_data = self._extract_profile_info(response.json(), username)
@@ -50,7 +50,7 @@ class InstagramExtractor:
             if not profile_data:
                 print(f"ERROR: Could not extract profile data for {username}")
                 print("No fallback to mock data. Real data only.")
-                return
+                return None  # Return None instead of just returning
             
             # Get post data for engagement metrics
             if not profile_data.get('is_private', False):
@@ -60,14 +60,12 @@ class InstagramExtractor:
             # Add to profiles data
             self.profiles_data.append(profile_data)
             print(f"Successfully extracted REAL data for {username}")
+            return profile_data  # Return the extracted profile_data
             
         except Exception as e:
             print(f"ERROR: Failed to extract data for {username}: {e}")
             print("No fallback to mock data. Real data only.")
-            return
-        
-        # Add delay between profiles to avoid rate limiting
-        time.sleep(random.uniform(2, 4))
+            return None  # Return None on exception
 
     def _extract_profile_info(self, data, username):
         """Extract profile information from API response - based on real API structure"""
