@@ -52,6 +52,7 @@ Run the pipeline with default settings:
 ```
 python main.py
 ```
+```
 streamlit run app.py
 
 ````
