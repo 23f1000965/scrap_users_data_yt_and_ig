@@ -24,8 +24,8 @@ This project extracts and analyzes metadata from Instagram and YouTube creator p
 
 1. Clone this repository:
    ```
-   git clone https://github.com/yourusername/social-media-metadata-extraction.git
-   cd social-media-metadata-extraction
+   git clone https://github.com/23f1000965/scrap_users_data_yt_and_ig.git
+   cd scrap_users_data_yt_and_ig
    ```
 
 2. Create a virtual environment (recommended):
