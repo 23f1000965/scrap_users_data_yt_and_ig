@@ -31,27 +31,30 @@ This project extracts and analyzes metadata from Instagram and YouTube creator p
 2. Create a virtual environment (recommended):
    ```
    python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   
+   ```
+   source venv/bin/activate
+   # On Windows:
+   ```
+   venv\Scripts\activate
    ```
 
-3. Install dependencies:
+4. Install dependencies:
    ```
    pip install -r requirements.txt
    ```
 
-4. Set up YouTube API credentials:
+5. Set up YouTube API credentials :
    - Create a project in the [Google Cloud Console](https://console.cloud.google.com/)
    - Enable the YouTube Data API v3
    - Create API credentials (OAuth client ID or API key)
    - Save your API key in a `.env` file as `YOUTUBE_API_KEY=your_api_key_here`
-
+6.Set up Instagram API credentials :
+   - Save your API key in a `.env` file as `INSTAGRAM_API_KEY=your_api_key_here`
 ## Usage
 
 Run the pipeline with default settings:
 
-```
-python main.py
-```
 ```
 streamlit run app.py
 
